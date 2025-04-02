@@ -341,10 +341,15 @@ void mask_out (int32 mask);
    cpu_mod      CPU modifiers list
 */
 
+#ifdef MICRONOVA
+UNIT cpu_unit = {
+    UDATA(NULL, UNIT_FIX + UNIT_BINK + UNIT_NOVA3,  DFTMEMSIZE /* MAXMEMSIZE */)
+};
+#else
 UNIT cpu_unit = {
     UDATA (NULL, UNIT_FIX+UNIT_BINK+UNIT_MDV,  DFTMEMSIZE /* MAXMEMSIZE */ )
     };
-
+#endif
 REG cpu_reg[] = {
     { ORDATA (PC, saved_PC, 15) },
     { ORDATA (AC0, AC[0], 16) },
@@ -409,6 +414,50 @@ DEVICE cpu_dev = {
     &cpu_ex, &cpu_dep, &cpu_reset,
     NULL, NULL, NULL
     };
+
+
+#if defined (MICRONOVA)
+#define DIAGROM_START_MICRONOVA  077400
+#define DIAGROM_LEN_MICRONOVA    (sizeof (diagrom_micronova) / sizeof (uint16))
+
+
+//This is the diagnostic debug for Micronova
+static const uint16 diagrom_micronova[] = {
+0x0400, 0x4970, 0x2800, 0x4971, 0x416C, 0x516D, 0x596D, 0x8570,
+0x673F, 0x8251, 0x8260, 0x60BF, 0x6789, 0x8251, 0x8260, 0x4168,
+0x6281, 0x4164, 0x6081, 0x4163, 0x0943, 0x2165, 0x3963, 0xAC01,
+0x5A00, 0xFB0C, 0x455F, 0x495E, 0x6088, 0x017F, 0xFBB5, 0x01F6,
+0x3918, 0xE40C, 0x0169, 0x623F, 0x4950, 0x2150, 0x6201, 0x214F,
+0x6001, 0x294E, 0xAA93, 0x6089, 0xAA90, 0xAA84, 0xFA04, 0xAC00,
+0x4947, 0x213F, 0x293F, 0x313F, 0x393F, 0x1142, 0x607F, 0x053D,
+0x0051, 0x1143, 0xAA51, 0xAD20, 0xAA50, 0xAA50, 0xEC00, 0x092D,
+0x092C, 0x0162, 0x3940, 0x9D05, 0x0140, 0xFBAD, 0x3933, 0xFBA5,
+0xAA4A, 0x01D5, 0x492F, 0x3D2E, 0x592E, 0x392B, 0x21B2, 0x3136,
+0xF700, 0xC600, 0x09C6, 0x491E, 0x2925, 0x01AE, 0xB200, 0x5927,
+0x5124, 0xB200, 0xAD91, 0xB501, 0x2169, 0x8300, 0xB52A, 0x0909,
+0x01FB, 0xAA04, 0x01FA, 0x3119, 0x0907, 0x007F, 0x0518, 0x2300,
+0xAA90, 0xAA90, 0xAA91, 0x21D0, 0x6249, 0x6749, 0x01FF, 0x0B01,
+0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF,
+0x09D6, 0x09E6, 0x0041, 0xCA00, 0x09E7, 0x00FF, 0xF200, 0xB600,
+0x3968, 0xBD2B, 0x0141, 0x9C05, 0x0199, 0x3941, 0x9D05, 0x0947,
+0x3935, 0xE505, 0x012F, 0xCA00, 0x8305, 0x0109, 0xAD30, 0x9BA4,
+0xE3B5, 0x0108, 0x09CD, 0x003F, 0x0934, 0x2A00, 0xFD20, 0x59DE,
+0xFC00, 0x59DA, 0x59DA, 0x6788, 0x01FF, 0x6188, 0x39BF, 0xE700,
+0x9D05, 0x09BE, 0xFC5F, 0x01F7, 0x3923, 0x9D2A, 0x0104, 0x3916,
+0x9D22, 0x0188, 0x11C9, 0xA900, 0x39C9, 0xEE00, 0x49C7, 0x391D,
+0x9D0C, 0x3919, 0x9D0C, 0x0185, 0x4A00, 0xFA9A, 0x01DE, 0x0911,
+0xCB00, 0xD490, 0xCF00, 0x212D, 0x09AB, 0x002F, 0xED12, 0xA51B,
+0xEE01, 0x01B7, 0x098C, 0x2A00, 0x098B, 0x01D0, 0x004C, 0x0037,
+0x59AE, 0x0996, 0x000D, 0x0994, 0x000A, 0x0992, 0xA221, 0x05A7,
+0xD500, 0x2B51, 0x4A02, 0xFB00, 0xD300, 0xAA0C, 0x01FB, 0x623F,
+0x02E4, 0x2816, 0x8F00, 0xA800, 0x100C, 0x1018, 0x101A, 0xAB04,
+0x0005, 0x300E, 0x50FF, 0x603F, 0x8242, 0x00FF, 0x0818, 0x8235,
+0x000F, 0x0817, 0x4C16, 0x1040, 0x0012, 0x003F, 0xAD10, 0x677F,
+0x0018, 0x613F, 0x8EF3, 0x0018, 0xAAC0, 0x0300, 0x0000, 0x7F01
+};
+#endif
+
 
 t_stat sim_instr (void)
 {
@@ -1005,14 +1054,30 @@ while (reason == 0) {                                   /* loop until halted */
                 mask_out (pimask = AC[dstAC]);
                 break;
 
-            case ioDIC:                                 /* io reset */
+            case ioDIC:
+#ifndef MICRONOVA
+                                                        /* io reset for NOVA but not Micronova*/
                 reset_all (0);                          /* reset devices */
                 mask_out( 0 ) ;                         /* clear all device masks  */
                 AMASK = 077777 ;                        /* reset memory mode */
+#endif // !(MICRONOVA)
                 break;
 
+            case ioDOA:
+#ifdef MICRONOVA
+                /* io reset for Micronova but not Nova*/
+                reset_all(0);                          /* reset devices */
+                mask_out(0);                         /* clear all device masks  */
+                AMASK = 077777;                        /* reset memory mode */
+#endif // (MICRONOVA)
+                break;
             case ioDOC:                                 /* halt */
+#ifdef MICRONOVA
+                PC = DIAGROM_START_MICRONOVA + 2;
+#else
+
                 reason = STOP_HALT;
+#endif
                 break;
                 }                                       /* end switch code */
 
@@ -1095,6 +1160,13 @@ int_req = int_req & ~(INT_ION | INT_STK | INT_TRAP);
 pimask = 0;
 dev_disable = 0;
 pwr_low = 0;
+
+#if defined (MICRONOVA)
+for (int i = 0; i < DIAGROM_LEN_MICRONOVA; i++)
+        M[DIAGROM_START_MICRONOVA + i] = diagrom_micronova[i];
+saved_PC = DIAGROM_START_MICRONOVA + 2;
+#endif
+
 AMASK = 077777 ;                                        /* 32KW mode */
 pcq_r = find_reg ("PCQ", NULL, dptr);
 if (pcq_r)
@@ -1475,7 +1547,11 @@ struct Dbits
     { INT_NO_ION_PENDING, 1, "IONPND"  },    /*  (invert this logic to provide cleaner display)  */
     { INT_STK,    0,    "STK"    },
     { INT_PIT,    0,    "PIT"    },
+#ifdef MICRONOVA
+    { INT_DKT,    0,    "DKT"    },
+#else
     { INT_DKP,    0,    "DKP"    },
+#endif
     { INT_DSK,    0,    "DSK"    },
     { INT_MTA,    0,    "MTA"    },
     { INT_LPT,    0,    "LPT"    },

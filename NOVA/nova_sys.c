@@ -61,7 +61,12 @@ extern DEVICE tti1_dev;
 extern DEVICE tto1_dev;
 extern DEVICE clk_dev;
 extern DEVICE lpt_dev;
+#if defined (MICRONOVA)
+extern DEVICE dkt_dev;
+extern DEVICE dhp_dev;
+#else
 extern DEVICE dkp_dev;
+#endif
 extern DEVICE dsk_dev;
 extern DEVICE mta_dev;
 extern DEVICE qty_dev;
@@ -93,6 +98,8 @@ extern int32 MapStat;
 
 #if defined (ECLIPSE)
 char sim_name[] = "ECLIPSE";
+#elif defined (MICRONOVA)
+char sim_name[] = "MICRONOVA";
 #else
 char sim_name[] = "NOVA";
 #endif
@@ -118,7 +125,12 @@ DEVICE *sim_devices[] = {
     &plt_dev,
     &lpt_dev,
     &dsk_dev,
-    &dkp_dev,
+#if defined (MICRONOVA)
+    &dhp_dev,
+    &dkt_dev,
+#else
+    & dkp_dev,
+#endif
     &mta_dev,
     &qty_dev,
     &alm_dev,

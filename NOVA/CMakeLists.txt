@@ -56,3 +56,26 @@ add_simulator(nova
     LABEL NOVA
     PKG_FAMILY dgnova_family
     TEST nova)
+
+add_simulator(micronova
+    SOURCES
+        nova_sys.c
+        nova_cpu.c
+        micronova_dkt.c
+        micronova_dhp.c
+        nova_dsk.c
+        nova_lp.c
+        nova_mta.c
+        nova_plt.c
+        nova_pt.c
+        nova_clk.c
+        nova_tt.c
+        nova_tt1.c
+        nova_qty.c
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}
+     DEFINES
+        MICRONOVA
+    LABEL MICRONOVA
+    PKG_FAMILY dgnova_family
+    TEST nova)

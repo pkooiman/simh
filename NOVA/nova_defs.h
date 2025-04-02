@@ -83,10 +83,18 @@
 #define MAXMEMSIZE      65536                           /* max memory size in 16-bit words: 32KW = DG max, */
                                                         /* 64 KW = 3rd-party extended memory feature  */
 #define DFTMEMSIZE      32768                           /* default/initial mem size  */
+
+#ifdef MICRONOVA
+#define DIAGROMSTART 077400
+#define DIAGRAMFIRST 077560
+#define DIAGRAMLAST  077577
+#define MEM_ADDR_OK(x) ( (((uint32) (x)) < (uint32) MEMSIZE) && ( ((((uint32) (x)) < (uint32) DIAGROMSTART)) || (((((uint32) (x)) >= (uint32) DIAGRAMFIRST))  && ((((uint32) (x)) <= (uint32) DIAGRAMLAST)))    ))
+#else
 #define MEM_ADDR_OK(x)  (((uint32) (x)) < (uint32) MEMSIZE)
 
 #endif
 
+#endif
 
 #define MEMSIZE         (cpu_unit.capac)                /* actual memory size */
 #define A_V_IND         15                              /* ind: indirect */
@@ -203,9 +211,11 @@
 #define DEV_DSK         020                             /* fixed head disk */
 #define DEV_MTA         022                             /* magtape */
 #define DEV_DCM         024                             /* data comm mux */
+#define DEV_DH          027                             /* Micronova Phoenix */
 #define DEV_ADCV        030                             /* A/D converter */
 #define DEV_QTY         030                             /* 4060 multiplexor */
 #define DEV_DKP         033                             /* disk pack */
+#define DEV_DKT         033                             /* Micronova 6038/6039 floppy */
 #define DEV_CAS         034                             /* cassette */
 #define DEV_ALM         034                             /* ALM/ULM multiplexor */
 #define DEV_PIT         043                             /* programmable interval timer */
@@ -245,27 +255,39 @@ typedef struct {
 */
 
 #define INT_V_PIT       2                               /* PIT */
-#define INT_V_DKP       3                               /* moving head disk */
-#define INT_V_DSK       4                               /* fixed head disk */
-#define INT_V_MTA       5                               /* magnetic tape */
-#define INT_V_LPT       6                               /* line printer */
-#define INT_V_CLK       7                               /* clock */
-#define INT_V_PTR       8                               /* paper tape reader */
-#define INT_V_PTP       9                               /* paper tape punch */
-#define INT_V_PLT       10                              /* plotter */
-#define INT_V_TTI       11                              /* keyboard */
-#define INT_V_TTO       12                              /* terminal */
-#define INT_V_TTI1      13                              /* second keyboard */
-#define INT_V_TTO1      14                              /* second terminal */
-#define INT_V_QTY       15                              /* QTY multiplexor */
-#define INT_V_ALM       16                              /* ALM multiplexor */
-#define INT_V_STK       17                              /* stack overflow */
-#define INT_V_NO_ION_PENDING 18                         /* ion delay */
-#define INT_V_ION       19                              /* interrupts on */
-#define INT_V_TRAP      20                              /* trap instruction */
+#ifdef MICRONOVA
+#define INT_V_DHP       (INT_V_PIT + 1)                 /* Micronova Phoenix disk */
+#define INT_V_DKT       (INT_V_DHP + 1)                 /* moving head disk */
+#define INT_V_DSK       (INT_V_DKT + 1)                 /* fixed head disk */
+#else
+#define INT_V_DKP       (INT_V_PIT + 1)                 /* moving head disk */
+#define INT_V_DSK       (INT_V_DKP + 1)                 /* fixed head disk */
+#endif
+
+#define INT_V_MTA       (INT_V_DSK + 1)                 /* magnetic tape */
+#define INT_V_LPT       (INT_V_MTA + 1)                 /* line printer */
+#define INT_V_CLK       (INT_V_LPT + 1)                 /* clock */
+#define INT_V_PTR       (INT_V_CLK + 1)                 /* paper tape reader */
+#define INT_V_PTP       (INT_V_PTR + 1)                 /* paper tape punch */
+#define INT_V_PLT       (INT_V_PTP + 1)                 /* plotter */
+#define INT_V_TTI       (INT_V_PLT + 1)                 /* keyboard */
+#define INT_V_TTO       (INT_V_TTI + 1)                 /* terminal */
+#define INT_V_TTI1      (INT_V_TTO + 1)                 /* second keyboard */
+#define INT_V_TTO1      (INT_V_TTI1 + 1)                /* second terminal */
+#define INT_V_QTY       (INT_V_TTO1 + 1)                /* QTY multiplexor */
+#define INT_V_ALM       (INT_V_QTY + 1)                 /* ALM multiplexor */
+#define INT_V_STK       (INT_V_ALM + 1)                 /* stack overflow */
+#define INT_V_NO_ION_PENDING (INT_V_STK + 1)            /* ion delay */
+#define INT_V_ION       (INT_V_NO_ION_PENDING + 1)      /* interrupts on */
+#define INT_V_TRAP      (INT_V_ION + 1)                 /* trap instruction */
 
 #define INT_PIT         (1 << INT_V_PIT)
+#ifdef MICRONOVA
+#define INT_DHP         (1 << INT_V_DHP)
+#define INT_DKT         (1 << INT_V_DKT)
+#else
 #define INT_DKP         (1 << INT_V_DKP)
+#endif
 #define INT_DSK         (1 << INT_V_DSK)
 #define INT_MTA         (1 << INT_V_MTA)
 #define INT_LPT         (1 << INT_V_LPT)
@@ -289,7 +311,12 @@ typedef struct {
 /* PI disable bits */
 
 #define PI_PIT          0001000
+#ifdef MICRONOVA
+#define PI_DKT          0000400
+#define PI_DHP          0000400
+#else
 #define PI_DKP          0000400
+#endif
 #define PI_DSK          0000100
 #define PI_MTA          0000040
 #define PI_LPT          0000010
