@@ -1465,6 +1465,12 @@ ECLIPSE = ${NOVAD}/eclipse_cpu.c ${NOVAD}/eclipse_tt.c ${NOVAD}/nova_sys.c \
 	${NOVAD}/nova_clk.c ${NOVAD}/nova_tt1.c ${NOVAD}/nova_qty.c
 ECLIPSE_OPT = -I ${NOVAD} -DECLIPSE -DUSE_INT64
 
+MICRONOVA = ${NOVAD}/nova_sys.c ${NOVAD}/nova_cpu.c ${NOVAD}/micronova_dkt.c \
+	${NOVAD}/micronova_dhp.c ${NOVAD}/nova_dsk.c ${NOVAD}/nova_lp.c ${NOVAD}/nova_mta.c \
+	${NOVAD}/nova_plt.c ${NOVAD}/nova_pt.c ${NOVAD}/nova_clk.c \
+	${NOVAD}/nova_tt.c ${NOVAD}/nova_tt1.c ${NOVAD}/nova_qty.c
+MICRONOVA_OPT = -I ${NOVAD} -DMICRONOVA
+
 
 PDP18BD = ${SIMHD}/PDP18B
 PDP18B = ${PDP18BD}/pdp18b_dt.c ${PDP18BD}/pdp18b_drm.c ${PDP18BD}/pdp18b_cpu.c \
@@ -2209,7 +2215,7 @@ ALL = pdp1 pdp4 pdp7 pdp8 pdp9 pdp15 pdp11 pdp10 \
 	microvax2000 infoserver100 infoserver150vxt microvax3100 microvax3100e \
 	vaxstation3100m30 vaxstation3100m38 vaxstation3100m76 vaxstation4000m60 \
 	microvax3100m80 vaxstation4000vlc infoserver1000 \
-	nd100 nova eclipse hp2100 hp3000 i1401 i1620 s3 altair altairz80 gri \
+	nd100 nova eclipse micronova hp2100 hp3000 i1401 i1620 s3 altair altairz80 gri \
 	i7094 ibm1130 id16 id32 sds lgp h316 cdc1700 \
 	swtp6800mp-a swtp6800mp-a2 tx-0 ssem b5500 intel-mds \
 	scelbi 3b2 3b2-700 i701 i704 i7010 i7070 i7080 i7090 \
@@ -2568,6 +2574,16 @@ ${BIN}eclipse${EXE} : ${ECLIPSE} ${SIM}
 ifneq (,$(call find_test,${NOVAD},eclipse))
 	$@ $(call find_test,${NOVAD},eclipse) ${TEST_ARG}
 endif
+
+micronova : ${BIN}micronova${EXE}
+
+${BIN}micronova${EXE} : ${MICRONOVA} ${SIM}
+	${MKDIRBIN}
+	${CC} ${MICRONOVA} ${SIM} ${MICRONOVA_OPT} ${CC_OUTSPEC} ${LDFLAGS}
+ifneq (,$(call find_test,${NOVAD},micronova))
+	$@ $(call find_test,${NOVAD},micronova) ${TEST_ARG}
+endif
+
 
 h316 : ${BIN}h316${EXE}
 

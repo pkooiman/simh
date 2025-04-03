@@ -63,11 +63,11 @@
    29-Jun-96    RMS     Added unit disable support
 */
 
-/* The Micronova 6095 HDD controller has the same command set as the NOVA 6045 controller, but it only supports 2 units*/
+/* The Micronova 6095 HDD controller has the same command set as the NOVA 6045 controller, but it only supports 1 unit*/
 
 #include "nova_defs.h"
 
-#define DHP_NUMDR       4                               /* #drives */
+#define DHP_NUMDR       1                               /* #drives */
 #define DHP_NUMWD       256                             /* words/sector */
 #define UNIT_V_DTYPE    (UNIT_V_UF + 0)                 /* disk type */
 #define UNIT_M_DTYPE    017

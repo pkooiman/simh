@@ -35,7 +35,7 @@ any other simulated system family. Simulators: altair, besm6, ssem, tt2500, tx-0
 )
 cpack_add_component(dgnova_family
     DISPLAY_NAME "DG Nova and Eclipse"
-    DESCRIPTION "Data General NOVA and Eclipse system simulators. Simulators: eclipse, nova"
+    DESCRIPTION "Data General NOVA and Eclipse system simulators. Simulators: eclipse, micronova, nova"
 )
 cpack_add_component(experimental
     DISPLAY_NAME "Experimental (work-in-progress) simulators"

@@ -37,26 +37,6 @@ add_simulator(eclipse
     PKG_FAMILY dgnova_family
     TEST eclipse)
 
-add_simulator(nova
-    SOURCES
-        nova_sys.c
-        nova_cpu.c
-        nova_dkp.c
-        nova_dsk.c
-        nova_lp.c
-        nova_mta.c
-        nova_plt.c
-        nova_pt.c
-        nova_clk.c
-        nova_tt.c
-        nova_tt1.c
-        nova_qty.c
-    INCLUDES
-        ${CMAKE_CURRENT_SOURCE_DIR}
-    LABEL NOVA
-    PKG_FAMILY dgnova_family
-    TEST nova)
-
 add_simulator(micronova
     SOURCES
         nova_sys.c
@@ -74,8 +54,28 @@ add_simulator(micronova
         nova_qty.c
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}
-     DEFINES
+    DEFINES
         MICRONOVA
-    LABEL MICRONOVA
+    LABEL NOVA
+    PKG_FAMILY dgnova_family
+    TEST micronova)
+
+add_simulator(nova
+    SOURCES
+        nova_sys.c
+        nova_cpu.c
+        nova_dkp.c
+        nova_dsk.c
+        nova_lp.c
+        nova_mta.c
+        nova_plt.c
+        nova_pt.c
+        nova_clk.c
+        nova_tt.c
+        nova_tt1.c
+        nova_qty.c
+    INCLUDES
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    LABEL NOVA
     PKG_FAMILY dgnova_family
     TEST nova)
