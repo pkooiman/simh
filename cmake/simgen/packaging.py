@@ -111,8 +111,8 @@ cdc1700_family = PkgFamily("cdc1700_family", "CDC 1700",
     """The Control Data Corporation's systems"""
 )
 
-dgnova_family = PkgFamily("dgnova_family", "DG Nova and Eclipse",
-    """Data General NOVA and Eclipse system simulators"""
+dgnova_family = PkgFamily("dgnova_family", "DG Nova. Micronova and Eclipse",
+    """Data General NOVA, Micronova and Eclipse system simulators"""
 )
 
 grisys_family = PkgFamily("grisys_family", "GRI Systems GRI-909",
