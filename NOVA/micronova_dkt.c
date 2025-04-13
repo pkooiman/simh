@@ -73,8 +73,8 @@
    when reading or writing a number of contiguous sectors. Depending on the programs' timimng, after reading sector N,
    they will issue a read/write for either sector N+1 or N+2.
 
-   For the simulator, a timer is used that fires every time a new sector needs to be under the head.
-   Read/write and read premable commands are cued and scheduled when the sector timer fires.
+   For the simulator, a simplistic approach is used where each "read preamble", "read" or "write" command will make the next sector the current sector
+   If a program requests an unexpected sector we silently update the current sector to that sector and read/write the requested sector.
    
 */
 
@@ -91,7 +91,7 @@
 #define FUNC            u3                              /* function */
 #define CYL             u4                              /* on cylinder */
 #define SECT             u5                              /* on sector */
-#define DKT_TIMER        (DKT_NUMDR)
+
 
 #define GET_SA(cy,sf,sc,t) (((((cy)*drv_tab[t].surf)+(sf))* \
     drv_tab[t].sect)+(sc))
@@ -242,7 +242,7 @@ t_stat dkt_boot (int32 unitno, DEVICE *dptr);
 t_stat dkt_attach (UNIT *uptr, CONST char *cptr);
 t_stat dkt_go ( int32 pulse );
 t_stat dkt_set_size (UNIT *uptr, int32 val, CONST char *cptr, void *desc);
-t_stat dkt_tmrsvc(UNIT* uptr);
+
 
 /* DKT data structures
 
@@ -258,8 +258,7 @@ UNIT dkt_unit[] = {
     { UDATA (&dkt_svc, UNIT_FIX+UNIT_ATTABLE+UNIT_DISABLE+UNIT_AUTO+
              UNIT_ROABLE+(TYPE_6038 << UNIT_V_DTYPE), SIZE_6038) },
     { UDATA(&dkt_svc, UNIT_FIX + UNIT_ATTABLE + UNIT_DISABLE + UNIT_AUTO +
-             UNIT_ROABLE + (TYPE_6038 << UNIT_V_DTYPE), SIZE_6038) },
-    { UDATA(&dkt_tmrsvc, UNIT_IDLE | UNIT_DIS, 0) },
+             UNIT_ROABLE + (TYPE_6038 << UNIT_V_DTYPE), SIZE_6038) }
     };
 
 REG dkt_reg[] = {
@@ -524,8 +523,15 @@ t_stat dkt_go(int32 pulse)
     case SC_6038_STEPOUT:
         sim_activate(uptr, dkt_step);                 /* schedule head step */
         break;
-    //SC_6038_READPREAMB, SC_6038_WRITENEXT and SC_6038_READNEXT are scheduled when the sector timer handler fires
-
+    case SC_6038_READPREAMB:
+        sim_activate(uptr, dkt_sectwait);              
+        break;
+    case SC_6038_READNEXT:
+        sim_activate(uptr, dkt_rwait);
+        break;
+    case SC_6038_WRITENEXT:
+        sim_activate(uptr, dkt_rwait);
+        break;
     case SC_6038_FORMAT0:
     case SC_6038_FORMATNEXT:
         if (uptr->flags & UNIT_WPRT) {
@@ -572,25 +578,32 @@ t_stat dkt_svc(UNIT* uptr)
         break;
 
     case SC_6038_READPREAMB:
-        
+        uptr->SECT = (uptr->SECT + 1) & 7;
+
         if (DKT_TRACE(3))
             fprintf(DKT_TRACE_FP, "  [Preamble, next up: track %2d sect %2d  ] \r\n", uptr->CYL, uptr->SECT);
         CA_6038_SETADDR(uptr->CYL, uptr->SECT);
         break;
     case SC_6038_READNEXT:
     case SC_6038_WRITENEXT:
-        
+
+
+        uptr->SECT = (uptr->SECT + 1) & 7;
+
+
         if (DKT_TRACE(3))
             fprintf(DKT_TRACE_FP, "  [%s, next up: track %2d sect %2d, requested sector %d  ] \r\n", (uptr->FUNC == SC_6038_READNEXT ? "readnext" : "writenext"), uptr->CYL, uptr->SECT, SC_6038_GET_SECT(dkt_6038_sc));
-        CA_6038_SETADDR(uptr->CYL, uptr->SECT);
+        
 
         if (uptr->SECT != SC_6038_GET_SECT(dkt_6038_sc))
         {
             if (DKT_TRACE(3))
                 fprintf(DKT_TRACE_FP, "  [%s, wrong sector %d, drive at sector %d ] \r\n", (uptr->FUNC == SC_6038_READNEXT ? "readnext" : "writenext"), SC_6038_GET_SECT(dkt_6038_sc), uptr->SECT);
-            dkt_sta |= STA_6038_SECTORERR;
-            break;
+
+            uptr->SECT = SC_6038_GET_SECT(dkt_6038_sc);
+            
         }
+        CA_6038_SETADDR(uptr->CYL, uptr->SECT);
 
         sa = GET_SA(uptr->CYL, 0, uptr->SECT, dtype);            /* get disk block */
         bda = sa * DKT_NUMWD * sizeof(uint16);             /* to words, bytes */
@@ -659,55 +672,6 @@ t_stat dkt_svc(UNIT* uptr)
 
 
 
-#define DKT_SIM_SECTORTIME 500
-#define DKT_SIM_ADDRTIME 5
-#define DKT_SIM_DATATIME 490
-
-
-t_stat dkt_tmrsvc(UNIT* tmrptr)
-{
-    //Simulate next sector coming up under the head
-    int32 u;
-    
-    t_stat rval = SCPE_OK;
-    UNIT* uptr;
-    
-    
-    for (u = 0; u < DKT_NUMDR; u++) {                       /* loop thru units */
-        uptr = dkt_dev.units + u;
-        uptr->SECT = (uptr->SECT + 1) & 7;
-    }
-
-    if (DEV_IS_BUSY(INT_DKT))
-    {
-        //A read preamble, read or write command may be pending, schedule it if so
-        u = SC_6038_GET_UNIT(dkt_6038_sc);                                /* get unit number */
-        uptr = dkt_dev.units + u;                               /* get unit */
-        if (!sim_is_active(uptr))
-        {
-            switch (uptr->FUNC)
-            {
-            case SC_6038_READPREAMB:
-                sim_activate_after(uptr, DKT_SIM_ADDRTIME);
-                break;
-            case SC_6038_READNEXT:
-                sim_activate_after(uptr, DKT_SIM_ADDRTIME + DKT_SIM_DATATIME);
-                break;
-            case SC_6038_WRITENEXT:
-                sim_activate_after(uptr, DKT_SIM_ADDRTIME + DKT_SIM_DATATIME);
-                break;
-            }
-        }
-    }
-    
-    sim_activate_after(tmrptr, DKT_SIM_SECTORTIME);                     /* reactivate */
-    
-    
-    return rval;
-}
-
-
-
 /* Reset routine */
 
 t_stat dkt_reset (DEVICE *dptr)
@@ -725,8 +689,6 @@ for (u = 0; u < DKT_NUMDR; u++) {                       /* loop thru units */
     sim_cancel (uptr);                                  /* cancel activity */
     uptr->CYL = uptr->SECT = uptr->FUNC = 0;
     }
-sim_cancel(&dkt_dev.units[DKT_TIMER]);
-sim_activate_after(&dkt_dev.units[DKT_TIMER], DKT_SIM_SECTORTIME);
 
 return SCPE_OK;
 }
