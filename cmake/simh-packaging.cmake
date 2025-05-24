@@ -59,7 +59,7 @@ cpack_add_component(hp_family
 )
 cpack_add_component(ibm_family
     DISPLAY_NAME "IBM"
-    DESCRIPTION "IBM system simulators: i650. Simulators: i1401, i1620, i650, i701, i7010, i704, i7070, i7080, i7090, i7094, ibm1130, s3"
+    DESCRIPTION "IBM system simulators: i650. Simulators: aes103, i1401, i1620, i650, i701, i7010, i704, i7070, i7080, i7090, i7094, ibm1130, s3"
 )
 cpack_add_component(imlac_family
     DISPLAY_NAME "IMLAC"

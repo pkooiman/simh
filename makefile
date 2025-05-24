@@ -172,6 +172,10 @@ ifneq (3,${SIM_MAJOR})
   ifneq (,$(findstring altairz80,${MAKECMDGOALS}))
     VIDEO_USEFUL = true
   endif
+  # building the AES103 need video support
+  ifneq (,$(findstring aes103,${MAKECMDGOALS}))
+    VIDEO_USEFUL = true
+  endif
 endif
 # building the SEL32 networking can be used
 ifneq (,$(findstring sel32,${MAKECMDGOALS}))
@@ -1991,6 +1995,14 @@ INTEL_MDS = ${INTELSYSC}/i8080.c ${INTEL_MDSD}/imds_sys.c \
 	${INTEL_PARTS}
 INTEL_MDS_OPT = -I ${INTEL_MDSD}
 
+AES103D = ${INTELSYSD}/aes103
+AES103 = ${AES103D}/i8080.c ${AES103D}/port.c ${AES103D}/aes103_sys.c \
+         ${AES103D}/aes103_irq.c ${AES103D}/aes103_disk.c ${AES103D}/aes103_ram.c \
+		 ${AES103D}/aes103_mem.c ${AES103D}/aes103_vid.c \
+		 ${AES103D}/aes103_ioflags.c ${AES103D}/aes103_timer.c ${AES103D}/aes103_kb.c
+AES103_OPT = -DUSE_SIM_VIDEO -I ${AES103D} 
+
+
 
 IBMPCD = ${INTELSYSD}/ibmpc
 IBMPCC = ${INTELSYSD}/common
@@ -2205,7 +2217,7 @@ PDQ3_OPT = -I ${PDQ3D}
 #
 ALL = pdp1 pdp4 pdp7 pdp8 pdp9 pdp15 pdp11 pdp10 \
 	vax microvax3900 microvax1 rtvax1000 microvax2 vax730 vax750 vax780 \
-	vax8200 vax8600 besm6 \
+	vax8200 vax8600 besm6 aes103\
 	microvax2000 infoserver100 infoserver150vxt microvax3100 microvax3100e \
 	vaxstation3100m30 vaxstation3100m38 vaxstation3100m76 vaxstation4000m60 \
 	microvax3100m80 vaxstation4000vlc infoserver1000 \
@@ -2757,6 +2769,17 @@ ${BIN}intel-mds${EXE} : ${INTEL_MDS} ${SIM} ${BUILD_ROMS}
 ifneq (,$(call find_test,${INTEL_MDSD},intel-mds))
 	$@ $(call find_test,${INTEL_MDSD},intel-mds) ${TEST_ARG}
 endif
+
+aes103: ${BIN}aes103${EXE}
+
+${BIN}aes103${EXE} : ${AES103} ${SIM} ${BUILD_ROMS}
+	#cmake:ignore-target
+	${MKDIRBIN}
+	${CC} ${AES103} ${SIM} ${AES103_OPT} ${CC_OUTSPEC} ${LDFLAGS}
+ifneq (,$(call find_test,${AES103D},aes103))
+	$@ $(call find_test,${AES103D},aes103) ${TEST_ARG}
+endif
+
 
 ibmpc: ${BIN}ibmpc${EXE}
 

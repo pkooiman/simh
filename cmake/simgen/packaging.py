@@ -115,6 +115,7 @@ dgnova_family = PkgFamily("dgnova_family", "DG Nova and Eclipse",
     """Data General NOVA and Eclipse system simulators"""
 )
 
+
 grisys_family = PkgFamily("grisys_family", "GRI Systems GRI-909",
     """GRI Systems GRI-909 system simulator"""
 )
@@ -189,6 +190,7 @@ package_info["i7080"] = SIMHPackaging(ibm_family)
 package_info["i7090"] = SIMHPackaging(ibm_family)
 package_info["i7094"] = SIMHPackaging(ibm_family)
 package_info["ibm1130"] = SIMHPackaging(ibm_family)
+package_info["aes103"] = SIMHPackaging(ibm_family)
 package_info["id16"] = SIMHPackaging(interdata_family)
 package_info["id32"] = SIMHPackaging(interdata_family)
 package_info["imlac"] = SIMHPackaging(imlac_family)
