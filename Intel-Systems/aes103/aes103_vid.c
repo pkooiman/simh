@@ -31,6 +31,7 @@ VID_DISPLAY *aes103vid_vptr = NULL;
 t_stat (*aes103vid_kb_callback)(SIM_KEY_EVENT *kev) = NULL;
 
 static uint8 aes103vid_ram[AES103VID_MEM_SIZE];
+static uint8 aes103halftone_ram[AES103VID_MEM_SIZE];
 
 //static uint8 vdm1_dstat = 0x00;
 static t_bool aes103vid_dirty = TRUE;
@@ -39,7 +40,7 @@ static t_bool aes103vid_dirty = TRUE;
 //static uint16 vdm1_counter = 0;
 static t_bool aes103vid_active = FALSE;
 static uint32 aes103vid_surface[AES103VID_PIXELS];
-static uint32 aes103vid_palette[2];
+static uint32 aes103vid_palette[3];
 
 static uint16 aes103vid_xstart;
 static uint8 aes103vid_xmax;
@@ -202,6 +203,7 @@ extern t_stat set_iobase(UNIT *uptr, int32 val, CONST char *cptr, void *desc);
 extern t_stat show_iobase(FILE *st, UNIT *uptr, int32 val, CONST void *desc);
 extern t_stat exdep_cmd(int32 flag, CONST char *cptr);
 extern uint8 reg_dev(uint8(*routine)(t_bool, uint8, uint8), uint16, uint16, uint8);
+extern uint8 get_ioflags();
 
 static t_stat aes103vid_svc(UNIT *uptr);
 static t_stat aes103vid_reset(DEVICE *dptr);
@@ -210,7 +212,9 @@ static const char* aes103vid_description(DEVICE* dptr);
 uint8 aes103vid_mem_from_cpu(uint32 addr, uint8 rw, uint8 data);
 static void aes103vid_refresh(void);
 static void aes103vid_render(void);
-static void aes103vid_render_char(uint8 byte, uint8 x, uint8 y);
+static void aes103vid_render_char(uint8 byte, uint8 x, uint8 y, uint8 halftone);
+static uint8 aes103halftone_mem_read(uint16 x, uint16 y, uint8 bg);
+
 
 /* VDM1 data structures
 
@@ -283,7 +287,7 @@ uint8 aes103vid_r1(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103vid_xstart = data;
-        sim_printf("Set video x start %d\n", aes103vid_xstart);
+        //sim_printf("Set video x start %d\n", aes103vid_xstart);
         return 0;
     }
 }
@@ -295,7 +299,7 @@ uint8 aes103vid_r2(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103vid_ystart = data;
-        sim_printf("Set video y start %d\n", aes103vid_ystart);
+        //sim_printf("Set video y start %d\n", aes103vid_ystart);
         return 0;
     }
 }
@@ -307,7 +311,7 @@ uint8 aes103vid_r3(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103vid_xmax = data;
-        sim_printf("Set video x max %d %d\n", (aes103vid_xmax >> 3) & 7, aes103vid_xmax & 7);
+        //sim_printf("Set video x max %d %d\n", (aes103vid_xmax >> 3) & 7, aes103vid_xmax & 7);
         return 0;
     }
 }
@@ -320,6 +324,8 @@ t_stat aes103vid_reset(DEVICE *dptr)
     int i;
 
     
+    memset(aes103halftone_ram, 0, sizeof(aes103halftone_ram));
+    memset(aes103vid_ram, 0, sizeof(aes103vid_ram));
 
     
     if (!aes103vid_active)  {
@@ -329,10 +335,12 @@ t_stat aes103vid_reset(DEVICE *dptr)
             return r;
         }
 
-        //vid_set_window_size(aes103vid_vptr, AES103VID_XSIZE, AES103VID_YSIZE);
+        vid_set_window_size(aes103vid_vptr, AES103VID_XSIZE * 2, AES103VID_YSIZE * 2);
+        
 
         aes103vid_palette[0] = vid_map_rgb_window(aes103vid_vptr, 0x00, 0x00, 0x00);
         aes103vid_palette[1] = vid_map_rgb_window(aes103vid_vptr, 0x00, 0xFF, 0x30);
+        aes103vid_palette[2] = vid_map_rgb_window(aes103vid_vptr, 0x00, 0x7F, 0x18);
 
         for (i = 0; i < AES103VID_PIXELS; i++) {
             aes103vid_surface[i] = aes103vid_palette[0];
@@ -367,6 +375,14 @@ static uint8 aes103vid_mem_read(uint16 x, uint16 y, uint8 bg)
     return aes103vid_ram[(bg ? (1 << 13) : 0) |  linaddr(x, y, bg)];
 }
 
+
+static uint8 aes103halftone_mem_read(uint16 x, uint16 y, uint8 bg)
+{
+
+    return aes103halftone_ram[(bg ? (1 << 13) : 0) | linaddr(x, y, bg)];
+}
+
+
 static aes103vid_mem_write(uint16 x, uint16 y, uint8 data, uint8 bg)
 {
     int vidaddr = (bg ? (1 << 13) : 0) | linaddr(x, y, bg);
@@ -376,6 +392,7 @@ static aes103vid_mem_write(uint16 x, uint16 y, uint8 data, uint8 bg)
         return;
     }
     aes103vid_ram[vidaddr] = data;
+    aes103halftone_ram[vidaddr] = get_ioflags() >> 7;
     aes103vid_dirty = TRUE;
 }
 
@@ -393,7 +410,7 @@ uint8 aes103vid_mem_from_cpu(uint32 addr, uint8 rw, uint8 data)
     else {
         if (y > 1)
         {
-            sim_printf("Vidmem write at X:%d Y:%d\n", x, y);
+            //sim_printf("Vidmem write at X:%d Y:%d\n", x, y);
         }
         aes103vid_mem_write(x, y, data, bg);
     }
@@ -411,7 +428,9 @@ const char * aes103vid_description (DEVICE *dptr)
  * Draw and refresh the screen in the video window
  */
 static void aes103vid_refresh(void) {
-    if (aes103vid_active) {
+    //IOflags 1 is video output enable
+    if (aes103vid_active && (get_ioflags() & 1))
+    {
         aes103vid_render();
         vid_draw_window(aes103vid_vptr, AES103VID_MARGIN, AES103VID_MARGIN, AES103VID_XSIZE, AES103VID_YSIZE, aes103vid_surface);
         vid_refresh_window(aes103vid_vptr);
@@ -440,37 +459,58 @@ static void aes103vid_render(void)
                 memy += aes103vid_ystart;
             }
 
-            uint8 cin = aes103vid_mem_read(memx, memy, A13);
-            uint8 c = cin & 0x7f;
-            uint8 underline = (cin & 0x80);
-
-            aes103vid_render_char(c, x, y);
+            uint8 c = aes103vid_mem_read(memx, memy, A13);
+            uint8 halftone = aes103halftone_mem_read(memx, memy, A13);
+            
+            aes103vid_render_char(c, x, y, halftone);
             
         }
     }
 }
 
 
-static void aes103vid_render_char(uint8 byte, uint8 x, uint8 y)
+static void aes103vid_render_char(uint8 byte, uint8 x, uint8 y, uint8 halftone)
 {
     uint8 rx,ry;
     int start,pixel;
 
-    
+    uint8 chr = byte & 0x7f;
+    uint8 underline = (byte & 0x80);
+    uint8 paletteindex_bg;
+    if (halftone)
+        paletteindex_bg = 2;
+    else
+        paletteindex_bg = 0;
+
+
     start = (x * AES103VID_CHAR_XSIZE) + (AES103VID_XSIZE * AES103VID_CHAR_YSIZE * y);
 
     for (ry = 0; ry < AES103VID_CHAR_YSIZE; ry++) {
 
         pixel = start + (AES103VID_XSIZE * ry);
 
-        uint8 c = aes103vid_charset[byte & 0x7f][ry];
+        uint8 c = aes103vid_charset[chr][ry];
 
         for (rx = 0; rx < 8; rx++) {
-            aes103vid_surface[pixel++] = aes103vid_palette[c & (0x80 >> rx) ? 1 : 0];
+            
+                
+            aes103vid_surface[pixel++] = aes103vid_palette[c & (0x80 >> rx) ? 1 : paletteindex_bg];
         }
 
-        aes103vid_surface[pixel++] = aes103vid_palette[0];
-        aes103vid_surface[pixel++] = aes103vid_palette[0];
+            aes103vid_surface[pixel++] = aes103vid_palette[paletteindex_bg];
+            aes103vid_surface[pixel++] = aes103vid_palette[paletteindex_bg];
+  
+    }
+
+    if (underline)
+    {
+        pixel = start + (AES103VID_XSIZE * (AES103VID_CHAR_YSIZE - 1));
+        for (rx = 0; rx < 8; rx++)
+        {
+            aes103vid_surface[pixel++] = aes103vid_palette[1];
+        }
+        aes103vid_surface[pixel++] = aes103vid_palette[1];
+        aes103vid_surface[pixel++] = aes103vid_palette[1];
     }
 }
 

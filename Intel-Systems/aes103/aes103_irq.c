@@ -214,13 +214,15 @@ t_stat irq_svc(UNIT *uptr)
 
 void irq_set(uint8 irqlevel)
 {
-    //sim_printf("Assert IRQ level %d\n", irqlevel);
+    //if (irqlevel)
+    //    sim_printf("Assert IRQ level %d\n", irqlevel);
     irqreqs &= ~(1 << irqlevel);
 }
 
 void irq_clear(uint8 irqlevel)
 {
-    //sim_printf("Desassert IRQ level %d\n", irqlevel);
+    //if (irqlevel)
+    //    sim_printf("Desassert IRQ level %d\n", irqlevel);
     irqreqs |= (1 << irqlevel);
 }
 

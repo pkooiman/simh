@@ -147,7 +147,7 @@ uint8 aes103keyboard_r6(t_bool io, uint8 data, uint8 devnum);
 
 uint8 aes103port(t_bool io, uint8 data, uint8 devnum)
 {
-    
+    uint8 val = 0;
     if (io == 0)
     {
         switch (devnum)
@@ -164,19 +164,29 @@ uint8 aes103port(t_bool io, uint8 data, uint8 devnum)
         case 4:
             return 0;
         case 5:
-            return aes103disk_r5(io, data, devnum);
+
+            val = aes103disk_r5(io, data, devnum);
+            //sim_printf("Read IO 5: %02X\n", val);
+            return val;
         case 6:
             //Keyboard
             return aes103keyboard_r6(io, data, devnum);
         case 7:
             //printer
             return 0;
+        case 0x28:
+            //DMA controller status
+            return aes103disk_r28(io, data, devnum);
         }
 
         return 0;
     }
     else
     {
+        if (devnum >= 0x10)
+        {
+            //sim_printf("Write IO %02X: %02X\n", devnum, data);
+        }
         switch (devnum)
         {
         case 0:

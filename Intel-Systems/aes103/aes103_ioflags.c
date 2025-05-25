@@ -100,9 +100,17 @@ uint8 aes103flags_r4(t_bool io, uint8 data, uint8 devnum)
     else
     {
         if (data & 0x8)
+        {
             aes103flags_ioflags |= 1 << (data & 7);
+            //sim_printf("Set ioflag %d\n", (data & 7));
+        }
         else
+        {
             aes103flags_ioflags &= ~(1 << (data & 7));
+            //sim_printf("Clear ioflag %d\n", (data & 7));
+        }
+
+
         handle_flag_change();
         return 0;
     }

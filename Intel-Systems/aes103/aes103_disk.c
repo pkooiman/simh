@@ -102,13 +102,13 @@
 #define LOAD1             0x01  
 
 //High bits of sector count control leds
-#define SECTORMASK 0x1F
+#define SECTORMASK 0x3F
  
 #define FDD_NUM          2
  
 #define aes103disk_NAME    "AES 103 Floppy Disk Controller Board"
 
-#define AES103_INT      INT_2
+#define AES103DISK_IRQ      2
 
 
 
@@ -184,8 +184,8 @@ int32 ssize;                            // sector size
  
 /* isbc208 Standard SIMH Device Data Structures - 4 units */
 UNIT aes103disk_unit[] = {
-    { UDATA (&aes103disk_svc, UNIT_ATTABLE|UNIT_BUFABLE|UNIT_MUSTBUF|UNIT_FIX, AES103DISKSIZE), 20 },
-    { UDATA(&aes103disk_svc, UNIT_ATTABLE | UNIT_BUFABLE | UNIT_MUSTBUF | UNIT_FIX, AES103DISKSIZE), 20 }
+    { UDATA (&aes103disk_svc, UNIT_ATTABLE|UNIT_BUFABLE|UNIT_MUSTBUF|UNIT_FIX, AES103DISKSIZE), 200 },
+    { UDATA(&aes103disk_svc, UNIT_ATTABLE | UNIT_BUFABLE | UNIT_MUSTBUF | UNIT_FIX, AES103DISKSIZE), 200 }
 };
  
 REG aes103disk_reg[] = {
@@ -381,10 +381,12 @@ t_stat aes103disk_svc (UNIT *uptr)
             sim_printf("Disk read: incorrect DMA direction ch1\n");
             return SCPE_IOERR;
         }
-        for (int i = 0; i < (i8257_r3 & 0xFF); i++) { /* copy selected sector to memory */
+        for (int i = 0; i < (i8257_r3 & 0xFF) + 1; i++) { /* copy selected sector to memory, count + 1 for sync byte */
             uint8 data = *(fbuf + (imgadr + i));
             put_mbyte(i8257_r2 + i, data);
         }
+
+        i8257_r8 |= (1 << 1); //Channel 1 count reached
     }
     else
     {
@@ -393,13 +395,30 @@ t_stat aes103disk_svc (UNIT *uptr)
             sim_printf("Disk write: incorrect DMA direction ch0\n");
             return SCPE_IOERR;
         }
-        for (int i = 0; i < (i8257_r1 & 0xFF); i++) { /* copy selected memory to image */
+        // Write includes 16 0x00 pre-bytes, skip them
+        uint8 syncseen = 0;
+        uint8 syncoffset = 0;
+        for (int i = 0; i < (i8257_r1 & 0xFF) + 1; i++) { /* copy selected memory to image, count + 1 for sync byte */
             uint8 data = get_mbyte(i8257_r0 + i);
-            *(fbuf + (imgadr + i)) = data;
+            if (syncseen)
+            {
+                *(fbuf + (imgadr + i - syncoffset)) = data;
+            }
+            else
+            {
+                if (data == 0xDB)
+                {
+                    syncseen = 1;
+                    syncoffset = i;
+                    *(fbuf + imgadr) = 0xDB;
+                }
+            }
         }
+        i8257_r8 |= (1 << 0); //Channel 0 count reached
     }
 
     aes103disk_status &= ~ACTIVE;
+    irq_set(AES103DISK_IRQ);
     
     return SCPE_OK;
 }
@@ -437,8 +456,11 @@ void aes103disk_set_ready_and_track()
 /* Disk status read */
 uint8 aes103disk_r5(t_bool io, uint8 data, uint8 devnum)
 {
-    if (io == 0) 
+    if (io == 0)
+    {
+        irq_clear(AES103DISK_IRQ);
         return aes103disk_status;
+    }
     else
         return 0;
 }
@@ -492,6 +514,7 @@ uint8 aes103disk_r14(t_bool io, uint8 data, uint8 devnum)
             aes103disk_status |= TRACK0;
         else
             aes103disk_status &= ~TRACK0;
+        irq_set(AES103DISK_IRQ);
         return 0;
     }
 }
@@ -653,7 +676,9 @@ uint8 aes103disk_r27(t_bool io, uint8 data, uint8 devnum)
 uint8 aes103disk_r28(t_bool io, uint8 data, uint8 devnum)
 {
     if (io == 0) {                      /* read status register */
-        return (i8257_r8);
+        uint8 stat = i8257_r8;
+        i8257_r8 = 0;
+        return (stat);
     }
     else {                            /* write mode register */
         i8257_r9 = data & BYTEMASK;

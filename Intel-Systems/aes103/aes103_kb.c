@@ -118,7 +118,7 @@ uint8 aes103keyboard_r6(t_bool io, uint8 data, uint8 devnum)
     if (io == 0)
     {
         irq_clear(IRQKEYBOARD);
-        sim_printf("Clear keyboard irq\n");
+        //sim_printf("Clear keyboard irq\n");
         aes103keyboard_keywaiting = 0;
         return aes103keyboard_pressedkey;
     }
