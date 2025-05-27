@@ -184,8 +184,8 @@ int32 ssize;                            // sector size
  
 /* isbc208 Standard SIMH Device Data Structures - 4 units */
 UNIT aes103disk_unit[] = {
-    { UDATA (&aes103disk_svc, UNIT_ATTABLE|UNIT_BUFABLE|UNIT_MUSTBUF|UNIT_FIX, AES103DISKSIZE), 200 },
-    { UDATA(&aes103disk_svc, UNIT_ATTABLE | UNIT_BUFABLE | UNIT_MUSTBUF | UNIT_FIX, AES103DISKSIZE), 200 }
+    { UDATA (&aes103disk_svc, UNIT_ATTABLE|UNIT_BUFABLE|UNIT_MUSTBUF|UNIT_FIX, AES103DISKSIZE), 80000 },
+    { UDATA(&aes103disk_svc, UNIT_ATTABLE | UNIT_BUFABLE | UNIT_MUSTBUF | UNIT_FIX, AES103DISKSIZE), 80000 }
 };
  
 REG aes103disk_reg[] = {
@@ -369,7 +369,7 @@ t_stat aes103disk_svc (UNIT *uptr)
 {
     int unitno = (aes103disk_cmd & DRIVE2SEL) ? 1 : 0;
     int isWrite = (aes103disk_cmd & WRITE);
-    sim_printf("AES103 disk service, %s disk %d, track %d, sector %d\n", isWrite ? "write" : "read", unitno, aes103disk_unit[unitno].u5, aes103disk_sectorno);
+    //sim_printf("AES103 disk service, %s disk %d, track %d, sector %d\n", isWrite ? "write" : "read", unitno, aes103disk_unit[unitno].u5, aes103disk_sectorno);
     //set_irq(SBC208_INT);    /* set interrupt */
 
     uint8* fbuf = (uint8*)uptr->filebuf;

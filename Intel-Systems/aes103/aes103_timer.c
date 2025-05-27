@@ -3,7 +3,7 @@
 
 #define aes103timer_NAME   "AES103 Timer Simulator"
 
-#define TIMERPERIOD 500000
+#define TIMERPERIOD 50000
 #define IRQTIMER 0
 #define IOFLAG_MASK_TIMERENABLE 0x2
 
