@@ -369,7 +369,7 @@ t_stat aes103disk_svc (UNIT *uptr)
 {
     int unitno = (aes103disk_cmd & DRIVE2SEL) ? 1 : 0;
     int isWrite = (aes103disk_cmd & WRITE);
-    //sim_printf("AES103 disk service, %s disk %d, track %d, sector %d\n", isWrite ? "write" : "read", unitno, aes103disk_unit[unitno].u5, aes103disk_sectorno);
+    sim_printf("AES103 disk service, %s disk %d, track %d, sector %d\n", isWrite ? "write" : "read", unitno, aes103disk_unit[unitno].u5, aes103disk_sectorno);
     //set_irq(SBC208_INT);    /* set interrupt */
 
     uint8* fbuf = (uint8*)uptr->filebuf;
@@ -456,9 +456,10 @@ void aes103disk_set_ready_and_track()
 /* Disk status read */
 uint8 aes103disk_r5(t_bool io, uint8 data, uint8 devnum)
 {
-    if (io == 0)
+    if (io == 0)    
     {
         irq_clear(AES103DISK_IRQ);
+        //("Disk status read: %02X\n", aes103disk_status);
         return aes103disk_status;
     }
     else
@@ -473,6 +474,7 @@ uint8 aes103disk_r10(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103disk_writesync = data;
+        sim_printf("Disk write sync byte set: %02X\n", data);
         return 0;
     }
 }
@@ -486,6 +488,7 @@ uint8 aes103disk_r11(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103disk_readsync = data;
+        sim_printf("Disk read sync byte set: %02X\n", data);
         return 0;
     }
 }
@@ -501,11 +504,13 @@ uint8 aes103disk_r14(t_bool io, uint8 data, uint8 devnum)
         UNIT* u = &aes103disk_unit[unitno];
         if (aes103disk_cmd & DIR)
         {
+            sim_printf("Disk step up\n");
             if (u->u5 + 1 < AES103NUMCYL)
                 u->u5++;
         }
         else
         {
+            sim_printf("Disk step down\n");
             if (u->u5 > 0)
                 u->u5--;
         }
@@ -528,6 +533,8 @@ uint8 aes103disk_r15(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103disk_sectorno = data & SECTORMASK;
+
+        sim_printf("Disk sector: %02X\n", aes103disk_sectorno);
         return 0;
     }
 }
@@ -540,6 +547,8 @@ uint8 aes103disk_r16(t_bool io, uint8 data, uint8 devnum)
     else
     {
         aes103disk_cmd = data;
+
+        sim_printf("Disk command: %02X\n", data);
         aes103disk_set_ready_and_track();
         return 0;
     }
@@ -556,6 +565,7 @@ uint8 aes103disk_r17(t_bool io, uint8 data, uint8 devnum)
         {
             int unitno = (aes103disk_cmd & DRIVE2SEL) ? 1 : 0;
             aes103disk_status |= ACTIVE;
+            sim_printf("Disk active\n");
             sim_activate(&aes103disk_unit[unitno], aes103disk_unit[unitno].wait);
         }
         return 0;

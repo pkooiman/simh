@@ -48,6 +48,7 @@ extern DEVICE aes103vid_dev;
 extern DEVICE aes103timer_dev;
 extern DEVICE aes103flags_dev;
 extern DEVICE aes103keyboard_dev;
+extern int32 saved_PC;
 
 
 
@@ -91,6 +92,9 @@ const char *sim_stop_messages[SCPE_BASE] = {
     "Invalid Memory",
     "XACK Error"
 };
+
+
+
 
 //#define MAXMEMSIZE 0x8000
 //unsigned char M[MAXMEMSIZE];

@@ -408,10 +408,9 @@ uint8 aes103vid_mem_from_cpu(uint32 addr, uint8 rw, uint8 data)
         data = aes103vid_mem_read(x, y, bg);
     }
     else {
-        if (y > 1)
-        {
-            //sim_printf("Vidmem write at X:%d Y:%d\n", x, y);
-        }
+        
+        //sim_printf("Vidmem write at X:%d Y:%d, %c\n", x, y, data);
+        
         aes103vid_mem_write(x, y, data, bg);
     }
 

@@ -232,6 +232,7 @@ t_stat  cpu_show_hist (FILE *st, UNIT *uptr, int32 val, CONST void *desc);
 t_stat  i8080_ex (t_value *vptr, t_addr addr, UNIT *uptr, int32 sw);
 t_stat  i8080_dep (t_value val, t_addr addr, UNIT *uptr, int32 sw);
 t_stat  i8080_reset (DEVICE *dptr);
+t_stat cpu_hex_load(FILE* fileref, CONST char* cptr, CONST char* fnam, int flag);
 
 /* external function prototypes */
 
@@ -1339,32 +1340,8 @@ int32 sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
     printf("cnt=%d start=%05X end=%05X\n", cnt, start, end);
     if (flag == 0) {                    //load
         if (sim_switches & SWMASK ('H')) { //hex
-            if (cnt > 1)                //2 arguments - error
-                return SCPE_ARG;
-            cnt = 0;
-            while (fgets(buf, sizeof(buf)-1, fileref)) {
-                sscanf(buf, " :%02x%04x%02x%s", &cnt, &addr, &rtype, data);
-                if (rtype == 0) {
-                    chk = 0;
-                    chk -= HLEN;
-                    chk -= addr & BYTEMASK;
-                    chk -= addr >> 8;
-                    p = (char *) data;
-                    for (i=0; i<=cnt; i++) {
-                        sscanf (p, "%2x", &byte);
-                        p += 2;
-                        put_mbyte(addr + i, byte);
-                        chk -= byte; chk &= BYTEMASK;
-                        cnt++;
-                    }
-                    sscanf (p, "%2x", &byte);
-                    if (chk == 0)
-                        printf("+");
-                    else
-                        printf("-");
-                } else 
-                    return SCPE_ARG;
-            }
+            return cpu_hex_load(fileref, cptr, fnam, flag);
+            
         } else {                        //binary
             cnt = 0;
             addr1 = addr;
@@ -1373,7 +1350,7 @@ int32 sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
                 addr++; cnt++;
             }
         }
-        printf ("%d Bytes loaded at %04X\n", cnt, addr1);
+        printf ("%04X Bytes (%d pages) loaded at %04X\n", cnt, ((cnt + 0x100) / 0x100) -1 , addr1);
         return (SCPE_OK);
     } else {                            //dump
         if (cnt != 2)                   //must be 2 arguments
@@ -1423,6 +1400,76 @@ int32 sim_load(FILE *fileref, CONST char *cptr, CONST char *fnam, int flag)
     }
     return (SCPE_OK);
 }
+
+#define MAXMEMORY 0x10000
+static t_stat cpu_hex_load(FILE* fileref, CONST char* cptr, CONST char* fnam, int flag) {
+    char gbuf[CBUFSIZE];
+    char linebuf[1024], datastr[1024], * bufptr;
+    int32 bytecnt, rectype, databyte, chksum, line = 0, cnt = 0;
+    
+    t_addr addr, org = 0;
+
+    get_glyph(cptr, gbuf, 0);
+    
+
+    while (!feof(fileref)) {
+        if (fgets(linebuf, sizeof(linebuf), fileref) == NULL)
+            break;
+
+        if (linebuf[0] == 0x1A)
+            break;
+        line++;
+
+        /* Strip EOL characters */
+        if ((bufptr = strchr(linebuf, '\r')) != NULL) {
+            *bufptr = '\0';
+        }
+        if ((bufptr = strchr(linebuf, '\n')) != NULL) {
+            *bufptr = '\0';
+        }
+
+        if (strlen(linebuf) == 0)
+            continue;
+
+        if (sscanf(linebuf, ":%2x%4x%2x%s", &bytecnt, &addr, &rectype, datastr) != 4) {
+            return sim_messagef(SCPE_IERR, "Hex file format error at line %d\n", line);
+        }
+        chksum = bytecnt + (addr >> 8) + (addr & 0xff) + rectype;
+
+        bufptr = datastr;
+
+        /* Ensure datastr is NULL-terminated. */
+        datastr[sizeof(datastr) - 1] = '\0';
+
+        if ((rectype == 0) && (bytecnt > 0) && (addr + bytecnt <= MAXMEMORY)) {
+            if (cnt == 0)
+                org = addr;
+
+            do {
+                if (sscanf(bufptr, "%2x", &databyte) != 1) {
+                    return sim_messagef(SCPE_IERR, "Hex file format error at line %d\n", line);
+                }
+                bufptr += 2;
+                put_mbyte(addr++, databyte);
+                
+
+                chksum += databyte;
+                cnt++;
+            } while (--bytecnt != 0);
+
+            if (sscanf(bufptr, "%2x", &databyte) != 1) {            /* checksum byte */
+                return sim_messagef(SCPE_IERR, "Hex file format error at line %d\n", line);
+            }
+
+            if (0 != ((chksum + databyte) & 0xff)) {
+                return sim_messagef(SCPE_IERR, "Checksum error at line %d\n   %s\n", line, linebuf);
+            }
+        }
+    }
+
+    return sim_messagef(SCPE_OK, "%d bytes loaded at %x.\n", cnt, org);
+}
+
 
 /* Symbolic output - working
    Inputs:
